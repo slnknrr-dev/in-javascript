@@ -1,0 +1,20 @@
+# Artifacts are produced by the tooling (downgrade*.js), not written by hand:
+# in a diff they are noise, in blame a false author.
+**/es*@*/** linguist-generated=true
+**/nodejs*@*/** linguist-generated=true
+
+# LF line endings everywhere.
+#
+# Before the first commit the repository was mixed: some sources had CRLF
+# (regexp.@inline/, secrets.python@3/, trigonometry.@math/cos.js,
+# prelude.rust@1/option.js, arraybuffer/, some .txt), some LF, and artifacts
+# came out mixed as well: stamp and runtime block in LF, the source text
+# carried over byte for byte in CRLF. Normalized at once while the history
+# is empty and it spoils nobody's diff (BACKLOG.md §12 item 25).
+#
+# Line endings never affected the build: codeHash is computed over
+# normalized text, where any line break collapses to a single \n.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary

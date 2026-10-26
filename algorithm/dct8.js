@@ -1,0 +1,68 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   dct8.js — разделимое двумерное DCT-II 8×8 и обратное к нему
+
+     dct8(block, out?)  → Float64Array(64)   коэффициенты, out[v*8+u]
+     idct8(coef, out?)  → Float64Array(64)   отсчёты, out[y*8+x]
+     DCT8_BASIS         → Float64Array(64)   базис, M[x*8+u]
+
+   Наивная реализация «в лоб»: два прохода по 8 точек, восемь умножений на
+   точку, всего 1024 умножения на блок. Быстрых алгоритмов (AAN, Loeffler)
+   здесь нет намеренно — этот файл читается за один присест и служит
+   эталоном, с которым сверяют быстрые.
+
+   Базис: M[x*8+u] = C(u)/2 · cos((2x+1)uπ/16), C(0) = 1/√2, иначе 1.
+   Пара dct8/idct8 ортонормирована, так что idct8(dct8(b)) ≈ b с точностью
+   двойной точности; целочисленного округления здесь нет вовсе — его делает
+   вызывающий, и делает по-своему.
+
+   Не про изображения: DCT-II — это JPEG, но и MP3/AAC (через MDCT),
+   MPEG/H.26x, спектральный анализ, сжатие телеметрии и численное решение
+   уравнений в частных производных на сетке Чебышёва.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* базис DCT: M[x*8+u] = C(u)/2 · cos((2x+1)uπ/16) */
+const DCT8_BASIS = (() => {
+  const m = new Float64Array(64);
+  for (let x = 0; x < 8; x++)
+    for (let u = 0; u < 8; u++)
+      m[x * 8 + u] = (u === 0 ? Math.SQRT1_2 : 1) / 2 * Math.cos((2 * x + 1) * u * Math.PI / 16);
+  return m;
+})();
+
+/* прямое: block[y*8+x] → out[v*8+u] */
+function dct8(block, out = new Float64Array(64)) {
+  const t = new Float64Array(64);
+  for (let y = 0; y < 8; y++)
+    for (let u = 0; u < 8; u++) {
+      let s = 0;
+      for (let x = 0; x < 8; x++) s += DCT8_BASIS[x * 8 + u] * block[y * 8 + x];
+      t[y * 8 + u] = s;
+    }
+  for (let u = 0; u < 8; u++)
+    for (let v = 0; v < 8; v++) {
+      let s = 0;
+      for (let y = 0; y < 8; y++) s += DCT8_BASIS[y * 8 + v] * t[y * 8 + u];
+      out[v * 8 + u] = s;
+    }
+  return out;
+}
+
+/* обратное: coef[v*8+u] → out[y*8+x] */
+function idct8(coef, out = new Float64Array(64)) {
+  const t = new Float64Array(64);
+  for (let y = 0; y < 8; y++)
+    for (let x = 0; x < 8; x++) {
+      let s = 0;
+      for (let u = 0; u < 8; u++) s += DCT8_BASIS[x * 8 + u] * coef[y * 8 + u];
+      t[y * 8 + x] = s;
+    }
+  for (let x = 0; x < 8; x++)
+    for (let y = 0; y < 8; y++) {
+      let s = 0;
+      for (let v = 0; v < 8; v++) s += DCT8_BASIS[y * 8 + v] * t[v * 8 + x];
+      out[y * 8 + x] = s;
+    }
+  return out;
+}
+
+export { dct8, idct8, DCT8_BASIS };

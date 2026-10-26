@@ -1,0 +1,3 @@
+node_modules/
+
+# Artifacts are NOT ignored: they are part of the repository, CI commits them.

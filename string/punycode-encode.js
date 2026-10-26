@@ -1,0 +1,41 @@
+/** Punycode (RFC 3492) of one label, without the 'xn--' prefix: 'пример' → 'e1afmkfd' */
+const encodePunycode = (label) => {
+	const cps = Array.from(label, (ch) => ch.codePointAt(0));
+	const digit = (d) => String.fromCharCode(d < 26 ? 97 + d : 22 + d);
+	const adapt = (delta, num, first) => {
+		delta = first ? Math.floor(delta / 700) : delta >> 1;
+		delta += Math.floor(delta / num);
+		let k = 0;
+		for (; delta > 455; k += 36) delta = Math.floor(delta / 35);
+		return k + Math.floor(36 * delta / (delta + 38));
+	};
+	let out = String.fromCharCode(...cps.filter((c) => c < 128));
+	const basic = out.length;
+	if (basic > 0) out += '-';
+	let n = 128, delta = 0, bias = 72, h = basic;
+	while (h < cps.length) {
+		const m = Math.min(...cps.filter((c) => c >= n));
+		delta += (m - n) * (h + 1);
+		n = m;
+		for (const c of cps) {
+			if (c < n) delta++;
+			if (c !== n) continue;
+			let q = delta;
+			for (let k = 36; ; k += 36) {
+				const t = k <= bias ? 1 : k >= bias + 26 ? 26 : k - bias;
+				if (q < t) break;
+				out += digit(t + (q - t) % (36 - t));
+				q = Math.floor((q - t) / (36 - t));
+			}
+			out += digit(q);
+			bias = adapt(delta, h + 1, h === basic);
+			delta = 0;
+			h++;
+		}
+		delta++;
+		n++;
+	}
+	return out;
+};
+
+export { encodePunycode };

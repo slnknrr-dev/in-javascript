@@ -1,0 +1,121 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  Artifacts: check and rebuild  (README_FOR_DEVOPS.md)
+#
+#  On a pull request: check only. Lint, `emit --check` and a report file.
+#  Artifacts are not committed there: the PR author runs `npm run update`
+#  themselves, otherwise the build does not match and `--check` says so.
+#  On push to main: the same check, then smoke on old engines, then a
+#  rebuild and a commit back by the bot.
+#
+#  Object format: the repository uses sha256, so nothing here may assume
+#  40-character hashes (`github.sha` is 64 hex here).
+#
+#  The tooling is the flat set of downgrade*.js files in the repository root.
+# ══════════════════════════════════════════════════════════════════════════
+
+name: artifacts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: docker
+    container: node:24-bookworm
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: structural invariants
+        run: npm run lint
+
+      # `--check` writes nothing: it compares what is in the repository with
+      # what the build produces. Exit code 1 means the artifacts are stale.
+      - name: artifacts match the sources
+        id: emit
+        run: npm run emit -- --check --report=build.md --why
+
+      - name: summary into the job
+        if: always()
+        run: cat build.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: report as a file
+        if: always()
+        uses: https://code.forgejo.org/actions/upload-artifact@v3
+        with:
+          name: build-report
+          path: build.md
+
+  # An artifact was downgraded for old engines, so let those engines load it.
+  # node 4/5/6 is installed as a tool; the runner itself stays on its node20.
+  #
+  # Known risk: the 4/5/6 binaries are built against an old glibc. If they
+  # do not start on the image, the step fails, and those levels fall back to
+  # the static check (ES3/ES5 grammar is verified during the build).
+  smoke:
+    needs: check
+    runs-on: docker
+    container: node:24-bookworm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: 4
+            targets: es3@cjs,es5@cjs
+          - node: 5
+            targets: nodejs5@cjs
+          - node: 6
+            targets: es6@cjs
+          - node: 13
+            targets: es6@mjs,nodejs13@cjs
+          - node: 18
+            targets: nodejs18@cjs
+          - node: 21
+            targets: nodejs21@cjs,nodejs21@mjs
+          - node: 24
+            targets: es16@cjs,es16@mjs
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+
+      # the list is prepared by the container's node: downgrade-smoke.js is
+      # an ES module, node 4 could not even parse it
+      - name: what to load
+        run: node downgrade-smoke.js --targets=${{ matrix.targets }} --list > files.txt
+
+      - uses: https://code.forgejo.org/actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # and the loading is done by the engine the artifact was downgraded for
+      - name: artifacts load on node ${{ matrix.node }}
+        run: |
+          node --version
+          xargs -a files.txt -d '
+' node downgrade-smoke-load.cjs
+
+  # Only main and only if something really changed. treeHash makes this
+  # cheap: editing a header comment of a codec changes no artifact byte,
+  # and there will be no commit.
+  commit:
+    needs: [check, smoke]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'artifacts-bot'
+    runs-on: docker
+    container: node:24-bookworm
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          token: ${{ secrets.ARTIFACTS_TOKEN }}
+
+      - name: rebuild
+        run: npm run update -- --prune
+
+      - name: commit if there is anything
+        run: |
+          git config user.name 'artifacts-bot'
+          git config user.email 'artifacts-bot@localhost'
+          git add -- '**/es*@*' '**/nodejs*@*'
+          git diff --cached --quiet && echo 'artifacts did not change' && exit 0
+          git commit -m 'chore(artifacts): regenerate [skip ci]'
+          git push

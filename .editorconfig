@@ -1,0 +1,20 @@
+# How to read and write the files of this repository.
+#
+# Line endings are deliberately not enforced here (BACKLOG.md §12 item 25):
+# .gitattributes normalizes them to LF on commit, and an artifact inherits
+# whatever its source has. So end_of_line is not set — the editor keeps it.
+
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{txt,yml,yaml,json}]
+indent_size = 2

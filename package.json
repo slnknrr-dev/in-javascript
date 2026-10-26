@@ -1,0 +1,21 @@
+{
+  "name": "@slnknrr/snippets",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Snippet monorepo: sources in ES2025+ ESM, artifacts next to them in folders like es16@mjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "update": "node downgrade.js update",
+    "emit": "node downgrade.js emit",
+    "tree": "node downgrade.js tree",
+    "lint": "node downgrade.js lint",
+    "minify": "node downgrade.js minify",
+    "downgrade": "node downgrade.js",
+    "smoke": "node downgrade-smoke.js",
+    "emit:check": "node downgrade.js emit --check",
+    "gen:unicode": "node downgrade-gen-unicode.js"
+  }
+}

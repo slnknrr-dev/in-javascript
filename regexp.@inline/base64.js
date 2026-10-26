@@ -1,0 +1,2 @@
+export const regexp_for_base64 = /^(?:[A-Za-z0-9+/]{4}){0,}(?:[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]==|[A-Za-z0-9+/]{3}[AQgw]=)?$/;
+export const regexp_for_base64_urlsafe = /^(?:(?:[A-Za-z0-9_-]{4}){0,}(?:[A-Za-z0-9_-]{2}[AQgw]|[A-Za-z0-9_-]{3}[AEIMQUYcgkosw048])?)$/;

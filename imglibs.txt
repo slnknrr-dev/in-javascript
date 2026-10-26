@@ -1,0 +1,12 @@
+[SIZE_COUNT_BYTES:=1,SIZE_INCREMENTOR,r,g,b,a]
+
+buffer [
+  bytes_for_max_size_number (width > height ? width : height)
+  ...width,
+  ...height,
+  ...rgba|hsva|hsla
+]
+
+jpg(uint8array) -> universal image buffer {
+  sz,wd,hg,[rgba|hsva|hsla]
+}

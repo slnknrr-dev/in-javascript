@@ -1,0 +1,1 @@
+typedarray-verify-sure.js as istypedarray.js

@@ -76,8 +76,8 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  scan["scan<br/>classify by path"] --> graph["import graph<br/>treeHash"]
-  graph --> fresh{"artifact<br/>up to date?"}
+  scan["scan<br/>classify by path"] --> modgraph["import graph<br/>treeHash"]
+  modgraph --> fresh{"artifact<br/>up to date?"}
   fresh -- yes --> skip(["skip"])
   fresh -- no --> parse["tokenize · parse<br/>scope analysis"]
   parse --> passes["~30 lowering passes<br/>classes · generators · async<br/>destructuring · ?. · ?? · RegExp u/s"]
